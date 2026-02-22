@@ -19,7 +19,7 @@ st.set_page_config(page_title="BOCANNADA CLUB", layout="wide")
 
 # --- ENLACE A TU PLANILLA ---
 # Reemplaza con tu link real de Google Sheets
-URL_SHEET = "TU_LINK_DE_GOOGLE_SHEETS_AQUI"
+URL_SHEET = "https://docs.google.com/spreadsheets/d/1ZSGn2uPcSrbaCGVIbfYK-GTZX_HtUzWagpLjq7jxfO8/edit?gid=0#gid=0"
 
 st.markdown("<h1 style='text-align: center; color: #2e7d32;'>🍃 BOCANNADA CLUB SOCIAL 🍃</h1>", unsafe_allow_html=True)
 
