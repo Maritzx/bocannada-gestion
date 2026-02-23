@@ -15,52 +15,69 @@ except ImportError:
         st.stop()
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="BOCANNADA CLUB", layout="wide")
+st.set_page_config(page_title="BOCANNADA CLUB", layout="wide", page_icon="🌿")
 
-# --- ENLACE A TU PLANILLA ---
-# Reemplaza con tu link real de Google Sheets
-URL_SHEET = "https://docs.google.com/spreadsheets/d/1ZSGn2uPcSrbaCGVIbfYK-GTZX_HtUzWagpLjq7jxfO8/edit?gid=0#gid=0"
+# --- ENLACE A TU PLANILLA (Link Limpio) ---
+URL_SHEET = "https://docs.google.com/spreadsheets/d/1ZSGn2uPcSrbaCGVIbfYK-GTZX_HtUzWagpLjq7jxfO8/edit"
 
+# --- DISEÑO ---
 st.markdown("<h1 style='text-align: center; color: #2e7d32;'>🍃 BOCANNADA CLUB SOCIAL 🍃</h1>", unsafe_allow_html=True)
 
 # --- CONEXIÓN ---
 try:
-    # Usamos st.cache_resource para que la conexión no se reinicie a cada rato
     @st.cache_resource
     def get_connection():
         return st.connection("gsheets", type=GSheetsConnection)
 
     conn = get_connection()
-    st.success("✅ Sistema conectado a la Nube")
+    st.sidebar.success("✅ Sincronizado con la Nube")
 except Exception as e:
-    st.error(f"❌ Error de conexión: {e}")
+    st.sidebar.error(f"❌ Error de conexión: {e}")
     st.stop()
 
-# --- FORMULARIO DE PRUEBA ---
-with st.form("test_registro"):
-    st.subheader("🚀 Prueba de envío")
-    ph = st.number_input("PH", value=6.5)
-    notas = st.text_input("Nota de prueba", value="Test Bocannada")
-    enviar = st.form_submit_button("GUARDAR DATOS")
+# --- INTERFAZ DE USUARIO ---
+tab1, tab2 = st.tabs(["📝 Registro", "📋 Ver Historial"])
 
-if enviar:
+with tab1:
+    with st.form("test_registro"):
+        st.subheader("🚀 Carga de Datos")
+        ph = st.number_input("PH", value=6.0, step=0.1)
+        ec = st.number_input("EC", value=1.4, step=0.1)
+        notas = st.text_input("Nota", value="Registro de prueba")
+        
+        enviar = st.form_submit_button("GUARDAR EN GOOGLE SHEETS")
+
+    if enviar:
+        try:
+            # 1. Intentar leer la pestaña 'historial'
+            df_previo = conn.read(spreadsheet=URL_SHEET, worksheet="historial")
+            
+            # 2. Crear nueva fila
+            nuevo_df = pd.DataFrame([{
+                "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "ph": ph,
+                "ec": ec,
+                "notas": notas
+            }])
+            
+            # 3. Combinar datos
+            df_final = pd.concat([df_previo, nuevo_df], ignore_index=True)
+            
+            # 4. Actualizar en la nube
+            conn.update(spreadsheet=URL_SHEET, worksheet="historial", data=df_final)
+            
+            st.balloons()
+            st.success("✅ ¡Datos guardados correctamente en Bocannada-DB!")
+            
+        except Exception as e:
+            st.error(f"Error al guardar: {e}")
+            st.warning("Verifica que la pestaña se llame 'historial' y que el link sea correcto.")
+
+with tab2:
+    st.subheader("Registros en tiempo real")
     try:
-        # Intentar leer primero
-        df_previo = conn.read(spreadsheet=URL_SHEET, worksheet="historial")
-        
-        # Crear nueva fila
-        nuevo_df = pd.DataFrame([{
-            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "ph": ph,
-            "notas": notas
-        }])
-        
-        # Unir y actualizar
-        df_final = pd.concat([df_previo, nuevo_df], ignore_index=True)
-        conn.update(spreadsheet=URL_SHEET, worksheet="historial", data=df_final)
-        
-        st.balloons()
-        st.success("¡Datos guardados con éxito en Google Sheets!")
-    except Exception as e:
-        st.error(f"Error al escribir en la planilla: {e}")
-
+        # Volver a leer para mostrar los datos más recientes
+        df_historial = conn.read(spreadsheet=URL_SHEET, worksheet="historial")
+        st.dataframe(df_historial.sort_values(by="fecha", ascending=False), use_container_width=True)
+    except:
+        st.info("No hay datos para mostrar todavía.")
